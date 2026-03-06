@@ -1005,12 +1005,12 @@ function enterEdit() {
   editing = true;
   const p = pages[curPath];
   $('title-view').style.display  = 'none';
-  $('title-edit').style.display  = '';
+  $('title-edit').style.display  = 'block';
   $('title-edit').value          = p.title || '';
   $('viewer').style.display      = 'none';
-  $('editor').style.display      = '';
+  $('editor').style.display      = 'block';
   $('editor').value              = p.content || '';
-  $('editor-hint').style.display = '';
+  $('editor-hint').style.display = 'block';
   setEditUI(true);
   $('editor').focus();
 }
