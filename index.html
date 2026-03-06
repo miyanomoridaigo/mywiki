@@ -753,9 +753,15 @@ marked.use({
       if (m) return { type: 'wikilink', raw: m[0], path: m[1].trim(), label: m[2]?.trim() ?? null };
     },
     renderer(t) {
-      const label  = t.label || t.path.split('/').pop();
-      const exists = !!pages[t.path];
-      return `<a href="#" class="${exists?'wl-exist':'wl-new'}" data-wp="${esc(t.path)}" title="${esc(t.path)}">${esc(label)}</a>`;
+      // [[page]] (no slash) → resolve relative to current page's directory
+      let path = t.path;
+      if (!path.includes('/') && curPath) {
+        const dir = curPath.split('/').slice(0, -1).join('/');
+        if (dir) path = dir + '/' + path;
+      }
+      const label  = t.label || path.split('/').pop();
+      const exists = !!pages[path];
+      return `<a href="#" class="${exists?'wl-exist':'wl-new'}" data-wp="${esc(path)}" title="${esc(path)}">${esc(label)}</a>`;
     }
   }],
   gfm: true, breaks: false
@@ -1059,16 +1065,39 @@ document.addEventListener('keydown', e => {
 ══════════════════════════════════════════════════════ */
 let _prefillPath = '', _prefillTitle = '';
 
-function openNewPage()  {
-  $('np-path').value = _prefillPath; $('np-title').value = _prefillTitle;
+function openNewPage() {
+  if (_prefillPath) {
+    // Called from a [[link]] click — use the resolved path as-is
+    $('np-path').value  = _prefillPath;
+    $('np-title').value = _prefillTitle;
+  } else {
+    // Called from + button — pre-fill with current page's directory
+    const dir = curPath ? curPath.split('/').slice(0, -1).join('/') : '';
+    $('np-path').value  = dir ? dir + '/' : '';
+    $('np-title').value = '';
+  }
   _prefillPath = ''; _prefillTitle = '';
-  $('overlay-newpage').classList.remove('hidden'); $('np-path').focus();
+  $('overlay-newpage').classList.remove('hidden');
+  const inp = $('np-path');
+  inp.focus();
+  // Move cursor to end so user can type the page name after the directory prefix
+  setTimeout(() => inp.setSelectionRange(inp.value.length, inp.value.length), 0);
 }
 function closeNewPage() { $('overlay-newpage').classList.add('hidden'); }
 
 function onPathInput() {
-  if (!$('np-title').value) $('np-title').value = $('np-path').value.split('/').pop();
+  // Auto-fill title with the last non-empty segment of the path
+  const seg = $('np-path').value.replace(/\/+$/, '').split('/').pop() || '';
+  if (!$('np-title').value || $('np-title').dataset.auto === '1') {
+    $('np-title').value = seg;
+    $('np-title').dataset.auto = seg ? '1' : '';
+  }
 }
+
+$('np-title').addEventListener('input', () => {
+  // Once the user manually edits the title, stop auto-filling it
+  $('np-title').dataset.auto = '';
+});
 
 async function doCreatePage() {
   if (!backend) { alert('バックエンドに接続してください'); return; }
