@@ -1,0 +1,1163 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Wiki</title>
+<script src="https://cdn.jsdelivr.net/npm/marked@9.1.6/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:        #0d1117;
+  --bg2:       #161b22;
+  --bg3:       #21262d;
+  --bg4:       #30363d;
+  --accent:    #58a6ff;
+  --accent2:   #1f6feb;
+  --danger:    #f85149;
+  --success:   #3fb950;
+  --warning:   #d29922;
+  --text:      #c9d1d9;
+  --text2:     #8b949e;
+  --text3:     #6e7681;
+  --border:    #30363d;
+  --border2:   #21262d;
+  --link:      #58a6ff;
+  --link-new:  #f0883e;
+  --sidebar-w: 260px;
+  --header-h:  48px;
+  --status-h:  26px;
+}
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans JP', sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ─── HEADER ──────────────────────────────────── */
+#app-header {
+  height: var(--header-h);
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  gap: 10px;
+  flex-shrink: 0;
+  z-index: 200;
+}
+
+#logo {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: -0.3px;
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+#breadcrumb {
+  flex: 1;
+  font-size: 13px;
+  color: var(--text2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0 4px;
+}
+
+#breadcrumb span { color: var(--text3); }
+
+.hbtn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 5px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.hbtn:hover { background: var(--bg3); border-color: var(--accent); }
+.hbtn.primary { background: var(--accent2); border-color: var(--accent2); color: #fff; }
+.hbtn.primary:hover { background: var(--accent); border-color: var(--accent); }
+.hbtn.danger { border-color: var(--danger); color: var(--danger); }
+.hbtn.danger:hover { background: rgba(248,81,73,0.1); }
+
+/* ─── LAYOUT ───────────────────────────────────── */
+#main {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+/* ─── SIDEBAR ──────────────────────────────────── */
+#sidebar {
+  width: var(--sidebar-w);
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+#sidebar-top {
+  padding: 10px 10px 8px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+#search-box {
+  flex: 1;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 5px 9px;
+  border-radius: 6px;
+  font-size: 13px;
+  outline: none;
+  font-family: inherit;
+}
+#search-box:focus { border-color: var(--accent); background: var(--bg4); }
+
+#new-btn {
+  flex-shrink: 0;
+  padding: 5px 9px;
+  font-size: 17px;
+  line-height: 1;
+}
+
+#sidebar-tree {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 6px 0 16px;
+}
+
+/* tree nodes */
+.s-dir {
+  /* wrapper */
+}
+
+.s-dir-head {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px 4px 10px;
+  cursor: pointer;
+  color: var(--text2);
+  font-size: 11.5px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.s-dir-head:hover { background: rgba(255,255,255,0.04); }
+
+.s-dir-arrow {
+  font-size: 9px;
+  transition: transform 0.2s;
+  width: 11px;
+  flex-shrink: 0;
+}
+.s-dir.closed .s-dir-arrow { transform: rotate(-90deg); }
+.s-dir.closed .s-dir-body  { display: none; }
+
+.s-dir-badge {
+  margin-left: auto;
+  background: var(--bg4);
+  color: var(--text3);
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 9px;
+  font-weight: 500;
+}
+
+.s-page {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  cursor: pointer;
+  color: var(--text);
+  font-size: 13px;
+  border-left: 2px solid transparent;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  transition: background 0.1s, border-color 0.1s;
+}
+.s-page:hover  { background: rgba(255,255,255,0.05); }
+.s-page.active { background: rgba(88,166,255,0.08); border-left-color: var(--accent); color: #fff; }
+.s-page.root   { padding-left: 12px; }
+
+.s-page-icon { flex-shrink: 0; opacity: 0.7; font-size: 12px; }
+
+/* indent children */
+.s-dir-body .s-page   { padding-left: 26px; }
+.s-dir-body .s-dir-body .s-page { padding-left: 42px; }
+.s-dir-body .s-dir-head { padding-left: 22px; }
+.s-dir-body .s-dir-body .s-dir-head { padding-left: 36px; }
+
+/* ─── CONTENT ──────────────────────────────────── */
+#content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+#page-header {
+  padding: 14px 28px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+#title-view {
+  font-size: 26px;
+  font-weight: 700;
+  color: #fff;
+  min-height: 38px;
+}
+
+#title-edit {
+  font-size: 26px;
+  font-weight: 700;
+  color: #fff;
+  background: transparent;
+  border: none;
+  outline: none;
+  width: 100%;
+  font-family: inherit;
+  display: none;
+}
+#title-edit::placeholder { color: var(--text3); }
+
+#page-meta {
+  font-size: 12px;
+  color: var(--text3);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#page-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 24px 28px 40px;
+  position: relative;
+}
+
+/* ─── MARKDOWN VIEWER ──────────────────────────── */
+#viewer {
+  max-width: 820px;
+  line-height: 1.85;
+  color: var(--text);
+}
+#viewer h1,#viewer h2,#viewer h3,#viewer h4,#viewer h5,#viewer h6 {
+  color: #fff;
+  margin: 1.5em 0 0.5em;
+  line-height: 1.3;
+  font-weight: 700;
+}
+#viewer h1 { font-size: 2em; }
+#viewer h2 { font-size: 1.5em; border-bottom: 1px solid var(--border); padding-bottom: 0.3em; }
+#viewer h3 { font-size: 1.2em; }
+#viewer h4 { font-size: 1em; }
+#viewer p  { margin: 0.75em 0; }
+
+#viewer a { color: var(--link); text-decoration: none; }
+#viewer a:hover { text-decoration: underline; }
+#viewer a.wl-new { color: var(--link-new); }
+#viewer a.wl-new::after { content: '?'; font-size: 0.8em; opacity: 0.7; }
+
+#viewer code {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', Consolas, monospace;
+  font-size: 0.88em;
+}
+#viewer pre {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 18px;
+  overflow-x: auto;
+  margin: 1em 0;
+}
+#viewer pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.9em;
+}
+#viewer blockquote {
+  border-left: 4px solid var(--accent2);
+  color: var(--text2);
+  margin: 1em 0;
+  padding: 4px 16px;
+}
+#viewer ul,#viewer ol { padding-left: 1.6em; margin: 0.5em 0; }
+#viewer li { margin: 0.25em 0; }
+#viewer li > ul,#viewer li > ol { margin: 0.2em 0; }
+
+#viewer table { border-collapse: collapse; width: 100%; margin: 1em 0; }
+#viewer th,#viewer td { border: 1px solid var(--border); padding: 7px 12px; text-align: left; }
+#viewer th { background: var(--bg3); color: #fff; font-weight: 600; }
+#viewer tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
+
+#viewer hr { border: none; border-top: 1px solid var(--border); margin: 1.5em 0; }
+#viewer img { max-width: 100%; border-radius: 6px; }
+
+#viewer input[type="checkbox"] { margin-right: 6px; accent-color: var(--accent); }
+
+/* ─── EDITOR ───────────────────────────────────── */
+#editor {
+  display: none;
+  width: 100%;
+  min-height: 500px;
+  height: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+  font-size: 14px;
+  line-height: 1.75;
+  resize: none;
+  tab-size: 2;
+}
+
+/* editor hint */
+#editor-hint {
+  display: none;
+  position: absolute;
+  bottom: 14px;
+  right: 18px;
+  font-size: 11px;
+  color: var(--text3);
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 10px;
+  pointer-events: none;
+}
+
+/* ─── EMPTY STATE ──────────────────────────────── */
+#empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 12px;
+  color: var(--text2);
+  text-align: center;
+}
+#empty-state .icon { font-size: 52px; line-height: 1; margin-bottom: 4px; }
+#empty-state h2 { font-size: 20px; color: var(--text); font-weight: 600; }
+#empty-state p { font-size: 13px; max-width: 340px; }
+
+/* ─── STATUS BAR ───────────────────────────────── */
+#status-bar {
+  height: var(--status-h);
+  background: var(--bg2);
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  gap: 10px;
+  font-size: 11.5px;
+  color: var(--text3);
+  flex-shrink: 0;
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text3);
+  flex-shrink: 0;
+  transition: background 0.3s;
+}
+.status-dot.connected    { background: var(--success); }
+.status-dot.disconnected { background: var(--danger); }
+.status-dot.syncing      { background: var(--warning); animation: blink 1s infinite; }
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}
+
+#status-msg { transition: color 0.3s; }
+#status-saved { margin-left: auto; }
+
+/* ─── MODALS ───────────────────────────────────── */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(2px);
+  padding: 16px;
+}
+.overlay.hidden { display: none; }
+
+.modal {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  width: 100%;
+  max-width: 500px;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+}
+
+.modal h2 {
+  font-size: 17px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.field { margin-bottom: 14px; }
+.field label {
+  display: block;
+  font-size: 12px;
+  color: var(--text2);
+  margin-bottom: 5px;
+  font-weight: 500;
+}
+.field input, .field textarea {
+  width: 100%;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 7px 11px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.field input:focus, .field textarea:focus { border-color: var(--accent); background: var(--bg4); }
+.field textarea { resize: none; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; height: 90px; }
+
+.field .hint { font-size: 11.5px; color: var(--text3); margin-top: 4px; }
+
+.modal-footer {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+/* SQL block */
+.sql-block {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px 14px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: #79c0ff;
+  white-space: pre;
+  overflow-x: auto;
+  margin: 8px 0 4px;
+  line-height: 1.6;
+  user-select: all;
+  cursor: text;
+}
+
+.copy-btn {
+  font-size: 11px;
+  padding: 3px 10px;
+  cursor: pointer;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  color: var(--text2);
+  border-radius: 4px;
+  float: right;
+  margin-bottom: 4px;
+  transition: background 0.15s;
+}
+.copy-btn:hover { background: var(--bg4); color: var(--text); }
+
+.info-box {
+  background: rgba(88,166,255,0.06);
+  border: 1px solid rgba(88,166,255,0.2);
+  border-radius: 6px;
+  padding: 10px 13px;
+  font-size: 12.5px;
+  color: var(--text2);
+  margin-bottom: 14px;
+  line-height: 1.6;
+}
+.info-box strong { color: var(--accent); }
+
+/* ─── SCROLLBAR ────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--bg4); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text3); }
+
+/* ─── RESPONSIVE ───────────────────────────────── */
+@media (max-width: 640px) {
+  #sidebar { display: none; }
+  #page-body { padding: 16px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ HEADER ════════════════════════════════════ -->
+<header id="app-header">
+  <span id="logo" onclick="goHome()">📖 My Wiki</span>
+  <div id="breadcrumb"></div>
+
+  <button class="hbtn" id="btn-edit"   onclick="enterEdit()"  style="display:none">✏️ 編集</button>
+  <button class="hbtn primary" id="btn-save" onclick="saveNow()"  style="display:none">💾 保存</button>
+  <button class="hbtn" id="btn-cancel" onclick="cancelEdit()" style="display:none">✕</button>
+  <button class="hbtn danger"  id="btn-delete" onclick="deletePage()" style="display:none" title="このページを削除">🗑</button>
+  <button class="hbtn" onclick="openSettings()" title="設定">⚙️</button>
+</header>
+
+<!-- ═══ MAIN ══════════════════════════════════════ -->
+<div id="main">
+
+  <!-- ── SIDEBAR ── -->
+  <nav id="sidebar">
+    <div id="sidebar-top">
+      <input id="search-box" type="text" placeholder="🔍 ページを検索…" oninput="onSearch(this.value)" autocomplete="off" spellcheck="false">
+      <button class="hbtn" id="new-btn" onclick="openNewPage()" title="新規ページ作成">＋</button>
+    </div>
+    <div id="sidebar-tree"></div>
+  </nav>
+
+  <!-- ── CONTENT ── -->
+  <div id="content">
+    <div id="page-header" style="display:none">
+      <div id="title-view"></div>
+      <input id="title-edit" type="text" placeholder="タイトルを入力…">
+      <div id="page-meta">
+        <span id="meta-path"></span>
+        <span id="meta-date"></span>
+      </div>
+    </div>
+
+    <div id="page-body">
+      <!-- Empty state -->
+      <div id="empty-state">
+        <div class="icon">📝</div>
+        <h2>Wiki へようこそ</h2>
+        <p>左のサイドバーからページを選択するか、<br>新しいページを作成してください。</p>
+        <button class="hbtn primary" onclick="openNewPage()">最初のページを作成</button>
+      </div>
+
+      <!-- Viewer -->
+      <div id="viewer" style="display:none"></div>
+
+      <!-- Editor -->
+      <textarea id="editor" placeholder="Markdown で記述できます。&#10;[[ページパス]] でリンクを作成します。&#10;例: [[notes/meeting]] [[projects/web|プロジェクト]]"></textarea>
+      <div id="editor-hint">Ctrl+S 保存 &nbsp;·&nbsp; Esc キャンセル</div>
+    </div>
+
+    <!-- Status bar -->
+    <div id="status-bar">
+      <div class="status-dot disconnected" id="status-dot"></div>
+      <span id="status-msg">Supabase 未接続</span>
+      <span id="status-saved"></span>
+    </div>
+  </div>
+
+</div><!-- #main -->
+
+<!-- ═══ MODAL: SETTINGS ═══════════════════════════ -->
+<div class="overlay hidden" id="overlay-settings">
+  <div class="modal">
+    <h2>⚙️ Supabase 設定</h2>
+    <div class="info-box">
+      まだ設定していない場合は <strong>supabase.com</strong> でプロジェクトを作成し、<br>
+      下の SQL をコピーして SQL エディタで実行してください。
+    </div>
+
+    <p style="font-size:12px;color:var(--text2);margin-bottom:6px;font-weight:500;">① テーブルを作成（SQL エディタで実行）</p>
+    <button class="copy-btn" onclick="copySql()">コピー</button>
+    <div class="sql-block" id="sql-block">CREATE TABLE wiki_pages (
+  id         uuid        DEFAULT gen_random_uuid() PRIMARY KEY,
+  path       text        UNIQUE NOT NULL,
+  title      text        NOT NULL DEFAULT '',
+  content    text        DEFAULT '',
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+ALTER TABLE wiki_pages ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "public_all" ON wiki_pages
+  FOR ALL USING (true) WITH CHECK (true);
+
+ALTER PUBLICATION supabase_realtime ADD TABLE wiki_pages;</div>
+
+    <p style="font-size:12px;color:var(--text2);margin:14px 0 6px;font-weight:500;">② 接続情報を入力</p>
+    <div class="field">
+      <label>Project URL</label>
+      <input type="text" id="cfg-url" placeholder="https://xxxxxxxxxxxx.supabase.co" autocomplete="off" spellcheck="false">
+    </div>
+    <div class="field">
+      <label>Anon / Public Key</label>
+      <input type="password" id="cfg-key" placeholder="eyJhbG…" autocomplete="new-password" spellcheck="false">
+      <div class="hint">Project Settings → API → Project API keys の anon/public</div>
+    </div>
+    <div class="modal-footer">
+      <button class="hbtn" onclick="closeSettings()">キャンセル</button>
+      <button class="hbtn primary" onclick="doConnect()">🔌 接続</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: NEW PAGE ════════════════════════════ -->
+<div class="overlay hidden" id="overlay-newpage">
+  <div class="modal">
+    <h2>📄 新規ページ</h2>
+    <div class="field">
+      <label>ページパス <span style="color:var(--text3)">(スラッシュでディレクトリを作れます)</span></label>
+      <input type="text" id="np-path" placeholder="notes/meeting, ideas/プロジェクト, home …" oninput="onPathInput()" autocomplete="off" spellcheck="false">
+      <div class="hint">例: <code>notes/2024-04</code> &nbsp;→&nbsp; サイドバーに「notes」フォルダが作成されます</div>
+    </div>
+    <div class="field">
+      <label>タイトル</label>
+      <input type="text" id="np-title" placeholder="ページのタイトル" autocomplete="off">
+    </div>
+    <div class="modal-footer">
+      <button class="hbtn" onclick="closeNewPage()">キャンセル</button>
+      <button class="hbtn primary" onclick="doCreatePage()">作成して編集</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SCRIPT ════════════════════════════════════ -->
+<script>
+'use strict';
+
+/* ─── STATE ─────────────────────────────────────── */
+let db        = null;   // Supabase client
+let pages     = {};     // { [path]: { title, content, updated_at } }
+let curPath   = null;   // currently open page path
+let editing   = false;  // edit mode
+let channel   = null;   // realtime channel
+let searchQ   = '';
+
+/* ─── MARKED SETUP ──────────────────────────────── */
+// Custom marked extension for [[path]] and [[path|title]]
+const wikiLinkExt = {
+  name: 'wikilink',
+  level: 'inline',
+  start(src) { return src.indexOf('[['); },
+  tokenizer(src) {
+    const m = /^\[\[([^\]\|]+?)(?:\|([^\]]+?))?\]\]/.exec(src);
+    if (m) return { type: 'wikilink', raw: m[0], path: m[1].trim(), label: m[2] ? m[2].trim() : null };
+  },
+  renderer(token) {
+    const label = token.label || token.path.split('/').pop();
+    const exists = !!pages[token.path];
+    const cls    = exists ? 'wl-exist' : 'wl-new';
+    const tip    = exists ? token.path : `${token.path} (未作成)`;
+    return `<a href="#" class="${cls}" data-wp="${esc(token.path)}" title="${esc(tip)}">${esc(label)}</a>`;
+  }
+};
+
+marked.use({
+  extensions: [wikiLinkExt],
+  gfm: true,
+  breaks: false,
+  pedantic: false,
+});
+
+/* ─── INIT ──────────────────────────────────────── */
+window.addEventListener('DOMContentLoaded', () => {
+  const savedUrl = localStorage.getItem('wiki_url');
+  const savedKey = localStorage.getItem('wiki_key');
+  if (savedUrl && savedKey) {
+    $('cfg-url').value = savedUrl;
+    $('cfg-key').value = savedKey;
+    doConnect(true);
+  } else {
+    openSettings();
+  }
+});
+
+/* ─── HELPERS ───────────────────────────────────── */
+function $(id) { return document.getElementById(id); }
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
+function setStatus(type, msg) {
+  const dot = $('status-dot');
+  dot.className = 'status-dot ' + type;
+  $('status-msg').textContent = msg;
+}
+
+function stamp() {
+  $('status-saved').textContent = '保存済 ' + new Date().toLocaleTimeString('ja-JP');
+}
+
+/* ─── SUPABASE ──────────────────────────────────── */
+async function doConnect(silent = false) {
+  const url = $('cfg-url').value.trim();
+  const key = $('cfg-key').value.trim();
+  if (!url || !key) { if (!silent) alert('URL と Key を入力してください'); return; }
+
+  setStatus('syncing', '接続中…');
+  try {
+    db = supabase.createClient(url, key);
+    const { error } = await db.from('wiki_pages').select('count', { count: 'exact', head: true });
+    if (error) throw error;
+
+    localStorage.setItem('wiki_url', url);
+    localStorage.setItem('wiki_key', key);
+    closeSettings();
+    setStatus('connected', '接続済み');
+    await loadAll();
+    startRealtime();
+  } catch (e) {
+    db = null;
+    setStatus('disconnected', 'エラー: ' + e.message);
+    if (!silent) alert('接続に失敗しました:\n' + e.message);
+    else openSettings();
+  }
+}
+
+async function loadAll() {
+  if (!db) return;
+  setStatus('syncing', '読み込み中…');
+  const { data, error } = await db.from('wiki_pages').select('path,title,content,updated_at').order('path');
+  if (error) { setStatus('connected', 'ロードエラー'); return; }
+
+  pages = {};
+  data.forEach(p => { pages[p.path] = { title: p.title, content: p.content, updated_at: p.updated_at }; });
+  setStatus('connected', `接続済み (${Object.keys(pages).length} ページ)`);
+
+  // Create welcome page if empty
+  if (!Object.keys(pages).length) {
+    await upsert('home', 'ホーム', WELCOME_CONTENT);
+    await loadAll();
+    openPage('home');
+    return;
+  }
+  renderSidebar();
+  if (curPath && pages[curPath]) renderContent();
+}
+
+async function upsert(path, title, content) {
+  if (!db) return false;
+  setStatus('syncing', '保存中…');
+  const now = new Date().toISOString();
+  const { error } = await db.from('wiki_pages').upsert(
+    { path, title, content, updated_at: now },
+    { onConflict: 'path' }
+  );
+  if (error) { setStatus('connected', '保存エラー: ' + error.message); return false; }
+  pages[path] = { title, content, updated_at: now };
+  setStatus('connected', '接続済み');
+  stamp();
+  return true;
+}
+
+async function remove(path) {
+  if (!db) return false;
+  const { error } = await db.from('wiki_pages').delete().eq('path', path);
+  if (error) { alert('削除エラー: ' + error.message); return false; }
+  delete pages[path];
+  return true;
+}
+
+/* ─── REALTIME ──────────────────────────────────── */
+function startRealtime() {
+  if (channel) channel.unsubscribe();
+  channel = db.channel('wiki-rt')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'wiki_pages' }, payload => {
+      const { eventType, new: n, old: o } = payload;
+      if (eventType === 'DELETE') {
+        delete pages[o.path];
+        if (curPath === o.path) showEmpty();
+      } else {
+        pages[n.path] = { title: n.title, content: n.content, updated_at: n.updated_at };
+        if (curPath === n.path && !editing) renderContent();
+      }
+      renderSidebar();
+    })
+    .subscribe();
+}
+
+/* ─── SIDEBAR ───────────────────────────────────── */
+function renderSidebar(filter) {
+  if (filter === undefined) filter = searchQ;
+  const tree = $('sidebar-tree');
+  const keys = Object.keys(pages).sort();
+  const visible = filter
+    ? keys.filter(p => p.toLowerCase().includes(filter.toLowerCase()) || (pages[p].title || '').toLowerCase().includes(filter.toLowerCase()))
+    : keys;
+
+  // Build tree object
+  const root = { _pages: [], _dirs: {} };
+  visible.forEach(path => {
+    const parts = path.split('/');
+    if (parts.length === 1) {
+      root._pages.push(path);
+    } else {
+      let node = root;
+      for (let i = 0; i < parts.length - 1; i++) {
+        const seg = parts[i];
+        if (!node._dirs[seg]) node._dirs[seg] = { _pages: [], _dirs: {}, _fullSeg: seg };
+        node = node._dirs[seg];
+      }
+      node._pages.push(path);
+    }
+  });
+
+  tree.innerHTML = visible.length === 0
+    ? `<div style="text-align:center;padding:28px 16px;color:var(--text3);font-size:12.5px">${filter ? '一致するページがありません' : 'ページがありません'}</div>`
+    : renderNode(root, true);
+}
+
+function renderNode(node, isRoot) {
+  let html = '';
+
+  // Root-level pages
+  node._pages.forEach(path => {
+    const p = pages[path];
+    const ttl = p.title || path;
+    const active = path === curPath ? ' active' : '';
+    const rootCls = isRoot ? ' root' : '';
+    html += `<div class="s-page${active}${rootCls}" onclick="openPage('${esc(path)}')" title="${esc(path)}"><span class="s-page-icon">📄</span>${esc(ttl)}</div>`;
+  });
+
+  // Subdirectories
+  Object.keys(node._dirs).sort().forEach(seg => {
+    const dir = node._dirs[seg];
+    const dirKey = 'dir_' + seg;
+    const isClosed = localStorage.getItem(dirKey) === '1';
+    const count = countPages(dir);
+    html += `
+      <div class="s-dir ${isClosed ? 'closed' : ''}" id="${esc(dirKey)}">
+        <div class="s-dir-head" onclick="toggleDir('${esc(dirKey)}')">
+          <span class="s-dir-arrow">▾</span>
+          <span>📁 ${esc(seg)}</span>
+          <span class="s-dir-badge">${count}</span>
+        </div>
+        <div class="s-dir-body">${renderNode(dir, false)}</div>
+      </div>`;
+  });
+
+  return html;
+}
+
+function countPages(node) {
+  let n = node._pages.length;
+  Object.values(node._dirs).forEach(d => { n += countPages(d); });
+  return n;
+}
+
+function toggleDir(key) {
+  const el = document.getElementById(key);
+  if (!el) return;
+  const closing = !el.classList.contains('closed');
+  el.classList.toggle('closed', closing);
+  localStorage.setItem(key, closing ? '1' : '0');
+}
+
+function onSearch(val) {
+  searchQ = val;
+  renderSidebar(val);
+}
+
+/* ─── PAGE OPEN / RENDER ────────────────────────── */
+function openPage(path) {
+  if (!pages[path]) return;
+  curPath  = path;
+  editing  = false;
+  renderSidebar();
+  renderContent();
+  updateHeader();
+  setEditUI(false);
+}
+
+function goHome() {
+  const homeKey = Object.keys(pages).find(p => p === 'home') || Object.keys(pages)[0];
+  if (homeKey) openPage(homeKey);
+}
+
+function renderContent() {
+  const p = pages[curPath];
+  if (!p) return;
+
+  $('empty-state').style.display = 'none';
+  $('viewer').style.display      = '';
+  $('editor').style.display      = 'none';
+  $('editor-hint').style.display = 'none';
+  $('page-header').style.display = '';
+
+  $('title-view').textContent    = p.title || curPath;
+  $('title-view').style.display  = '';
+  $('title-edit').style.display  = 'none';
+
+  $('meta-path').textContent  = curPath;
+  $('meta-date').textContent  = p.updated_at ? '更新: ' + new Date(p.updated_at).toLocaleString('ja-JP') : '';
+
+  // Render markdown (wikilinks handled by marked extension)
+  $('viewer').innerHTML = marked.parse(p.content || '');
+
+  // Attach click handlers to wiki links
+  $('viewer').querySelectorAll('a[data-wp]').forEach(a => {
+    a.addEventListener('click', e => {
+      e.preventDefault();
+      const wp = a.getAttribute('data-wp');
+      if (pages[wp]) {
+        openPage(wp);
+      } else {
+        if (confirm(`「${wp}」はまだ存在しません。作成しますか？`)) {
+          const seg = wp.split('/').pop();
+          prefillNewPage(wp, seg);
+          openNewPage();
+        }
+      }
+    });
+  });
+
+  // Breadcrumb
+  const parts = curPath.split('/');
+  $('breadcrumb').innerHTML = parts.map((seg, i) => {
+    if (i === parts.length - 1) return `<strong style="color:var(--text)">${esc(seg)}</strong>`;
+    return `<span style="color:var(--text2)">${esc(seg)}</span>`;
+  }).join('<span style="margin:0 4px;color:var(--text3)">/</span>');
+}
+
+function showEmpty() {
+  curPath = null;
+  $('empty-state').style.display  = '';
+  $('viewer').style.display       = 'none';
+  $('editor').style.display       = 'none';
+  $('editor-hint').style.display  = 'none';
+  $('page-header').style.display  = 'none';
+  $('breadcrumb').innerHTML       = '';
+  setEditUI(false);
+}
+
+function updateHeader() {
+  $('btn-edit').style.display   = curPath ? '' : 'none';
+  $('btn-delete').style.display = curPath ? '' : 'none';
+}
+
+/* ─── EDIT MODE ─────────────────────────────────── */
+function setEditUI(on) {
+  $('btn-edit').style.display   = (!on && curPath) ? '' : 'none';
+  $('btn-delete').style.display = (!on && curPath) ? '' : 'none';
+  $('btn-save').style.display   = on ? '' : 'none';
+  $('btn-cancel').style.display = on ? '' : 'none';
+}
+
+function enterEdit() {
+  if (!curPath || !db) return;
+  editing = true;
+  const p = pages[curPath];
+
+  $('title-view').style.display  = 'none';
+  $('title-edit').style.display  = '';
+  $('title-edit').value          = p.title || '';
+  $('viewer').style.display      = 'none';
+  $('editor').style.display      = '';
+  $('editor').value              = p.content || '';
+  $('editor-hint').style.display = '';
+  setEditUI(true);
+  $('editor').focus();
+}
+
+function cancelEdit() {
+  editing = false;
+  if (curPath && pages[curPath]) {
+    renderContent();
+  } else {
+    showEmpty();
+  }
+  setEditUI(false);
+}
+
+async function saveNow() {
+  if (!curPath || !db) return;
+  const title   = $('title-edit').value.trim() || curPath.split('/').pop();
+  const content = $('editor').value;
+  const ok      = await upsert(curPath, title, content);
+  if (!ok) return;
+  editing = false;
+  renderSidebar();
+  renderContent();
+  setEditUI(false);
+}
+
+async function deletePage() {
+  if (!curPath) return;
+  if (!confirm(`「${pages[curPath]?.title || curPath}」を削除しますか？\nこの操作は元に戻せません。`)) return;
+  const path = curPath;
+  showEmpty();
+  await remove(path);
+  renderSidebar();
+}
+
+// Ctrl+S / Escape
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 's' && editing) { e.preventDefault(); saveNow(); }
+  if (e.key === 'Escape') {
+    if (editing) { cancelEdit(); return; }
+    closeSettings(); closeNewPage();
+  }
+});
+
+/* ─── NEW PAGE MODAL ────────────────────────────── */
+let _prefillPath = '', _prefillTitle = '';
+
+function prefillNewPage(path, title) { _prefillPath = path; _prefillTitle = title; }
+
+function openNewPage() {
+  $('np-path').value  = _prefillPath;
+  $('np-title').value = _prefillTitle;
+  _prefillPath = ''; _prefillTitle = '';
+  $('overlay-newpage').classList.remove('hidden');
+  $('np-path').focus();
+}
+
+function closeNewPage() { $('overlay-newpage').classList.add('hidden'); }
+
+function onPathInput() {
+  // Auto-fill title from last path segment if title is empty
+  const path = $('np-path').value;
+  if (!$('np-title').value) {
+    const seg = path.split('/').pop();
+    $('np-title').value = seg;
+  }
+}
+
+async function doCreatePage() {
+  if (!db) { alert('Supabase に接続してください'); return; }
+  let path  = $('np-path').value.trim().replace(/\s+/g, '-').replace(/^\/+|\/+$/g, '');
+  const ttl = $('np-title').value.trim() || path.split('/').pop();
+  if (!path) { $('np-path').focus(); return; }
+
+  if (pages[path]) { closeNewPage(); openPage(path); return; }
+
+  const ok = await upsert(path, ttl, `# ${ttl}\n\n`);
+  if (!ok) return;
+  closeNewPage();
+  renderSidebar();
+  openPage(path);
+  enterEdit();
+}
+
+// Enter key in new page modal
+$('overlay-newpage').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); doCreatePage(); }
+});
+
+/* ─── SETTINGS MODAL ────────────────────────────── */
+function openSettings()  { $('overlay-settings').classList.remove('hidden'); }
+function closeSettings() { $('overlay-settings').classList.add('hidden'); }
+
+function copySql() {
+  const txt = $('sql-block').textContent;
+  navigator.clipboard.writeText(txt).then(() => {
+    const btn = document.querySelector('.copy-btn');
+    btn.textContent = '✓ コピー済';
+    setTimeout(() => { btn.textContent = 'コピー'; }, 2000);
+  });
+}
+
+// Click outside to close modals
+['overlay-settings', 'overlay-newpage'].forEach(id => {
+  $(id).addEventListener('click', e => { if (e.target.id === id) $(id).classList.add('hidden'); });
+});
+
+/* ─── WELCOME CONTENT ───────────────────────────── */
+const WELCOME_CONTENT = `# ようこそ My Wiki へ 🎉
+
+これはあなただけの個人 Wiki です。Supabase でデータを同期しているので、**複数の端末から同じコンテンツ**にアクセスできます。
+
+## 基本的な使い方
+
+### ページリンク
+
+\`[[\`と\`]]\` でページへのリンクを作れます:
+
+- [[notes/はじめて]] — クリックすると新規ページ作成を提案します
+- [[ideas/アイデア集|アイデア集]] — パイプ \`|\` の後にラベルを変えられます
+- [[projects/web]] — ディレクトリ構造でページを整理できます
+
+### Markdown 対応
+
+**太字** / *斜体* / ~~取り消し~~
+
+\`\`\`python
+# コードブロック
+def hello():
+    return "Hello, Wiki!"
+\`\`\`
+
+> ブロック引用もサポートしています。
+
+| 機能 | 状態 |
+|------|------|
+| Markdown | ✅ |
+| Wikiリンク | ✅ |
+| リアルタイム同期 | ✅ |
+| サイドバー | ✅ |
+
+---
+
+## キーボードショートカット
+
+- **Ctrl + S** — 編集中のページを保存
+- **Esc** — 編集をキャンセル / モーダルを閉じる
+
+## ヒント
+
+- 左上の **＋** ボタンで新しいページを作成
+- ページパスにスラッシュを使うとフォルダに整理されます: \`notes/2024-04\`
+- \`[[存在しないページ]]\` をクリックするとページ作成を提案します（<span style="color:orange">オレンジ色</span>のリンク）
+`;
+</script>
+</body>
+</html>
