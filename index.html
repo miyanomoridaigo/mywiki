@@ -309,6 +309,45 @@ body { display: flex; flex-direction: column; overflow: hidden; }
 /* ─── NEW PAGE MODAL ─── */
 #np-path, #np-title { font-size: 14px; }
 
+/* ─── GRAPH VIEW ─── */
+#overlay-graph { padding: 0; background: var(--bg); backdrop-filter: none; }
+
+#graph-panel {
+  width: 100%; height: 100%;
+  display: flex; flex-direction: column;
+}
+#graph-toolbar {
+  height: 48px; background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center;
+  padding: 0 16px; gap: 14px; flex-shrink: 0;
+}
+#graph-toolbar-title { font-size: 15px; font-weight: 600; color: #fff; white-space: nowrap; }
+#graph-stats { font-size: 12px; color: var(--text3); white-space: nowrap; }
+#graph-legend {
+  display: flex; align-items: center; gap: 14px;
+  margin-left: auto; font-size: 11.5px; color: var(--text2);
+  flex-wrap: wrap;
+}
+.gl-dot {
+  display: inline-block; width: 9px; height: 9px;
+  border-radius: 50%; margin-right: 4px; vertical-align: middle;
+}
+#graph-container { flex: 1; overflow: hidden; position: relative; }
+#graph-container svg { display: block; width: 100%; height: 100%; }
+#graph-tooltip {
+  display: none; position: fixed; pointer-events: none;
+  background: var(--bg2); border: 1px solid var(--border);
+  color: var(--text); font-size: 12px; padding: 5px 10px;
+  border-radius: 6px; z-index: 2000; max-width: 280px;
+  white-space: nowrap; box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+}
+#graph-hint {
+  position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%);
+  font-size: 11px; color: var(--text3); pointer-events: none;
+  background: rgba(13,17,23,0.8); padding: 3px 10px; border-radius: 4px;
+}
+
 /* ─── RESPONSIVE ─── */
 @media (max-width: 640px) { #sidebar { display: none; } #page-body { padding: 16px; } }
 
@@ -328,6 +367,7 @@ body { display: flex; flex-direction: column; overflow: hidden; }
   <button class="hbtn primary" id="btn-save" onclick="saveNow()" style="display:none">💾 保存</button>
   <button class="hbtn" id="btn-cancel" onclick="cancelEdit()" style="display:none">✕</button>
   <button class="hbtn danger" id="btn-delete" onclick="deletePage()" style="display:none" title="削除">🗑</button>
+  <button class="hbtn" id="btn-graph" onclick="openGraph()" title="グラフビュー (Ctrl+G)">🕸️ グラフ</button>
   <button class="hbtn" onclick="openSettings()">⚙️ 設定</button>
 </header>
 
@@ -504,6 +544,26 @@ ALTER PUBLICATION supabase_realtime ADD TABLE wiki_pages;</div>
     </div>
   </div>
 </div>
+
+<!-- ═══ MODAL: GRAPH ═════════════════════════════════════ -->
+<div class="overlay hidden" id="overlay-graph">
+  <div id="graph-panel">
+    <div id="graph-toolbar">
+      <span id="graph-toolbar-title">🕸️ ページグラフ</span>
+      <span id="graph-stats"></span>
+      <div id="graph-legend">
+        <span><span class="gl-dot" style="background:#f0883e"></span>現在のページ</span>
+        <span><span class="gl-dot" style="background:#388bfd"></span>既存ページ</span>
+        <span><span class="gl-dot" style="background:#21262d;border:1px dashed #555"></span>未作成</span>
+      </div>
+      <button class="hbtn" onclick="closeGraph()">✕ 閉じる</button>
+    </div>
+    <div id="graph-container">
+      <div id="graph-hint">スクロール: ズーム　ドラッグ: パン　ノードをドラッグ: 移動　クリック: ページへ移動</div>
+    </div>
+  </div>
+</div>
+<div id="graph-tooltip"></div>
 
 <!-- ═══ SCRIPT ══════════════════════════════════════════ -->
 <script>
@@ -1056,10 +1116,15 @@ async function deletePage() {
 }
 
 document.addEventListener('keydown', e => {
-  if ((e.ctrlKey||e.metaKey) && e.key==='s' && editing) { e.preventDefault(); saveNow(); }
+  if ((e.ctrlKey||e.metaKey) && e.key==='s' && editing)  { e.preventDefault(); saveNow(); }
   if ((e.ctrlKey||e.metaKey) && e.key==='n' && !editing) { e.preventDefault(); openNewPage(); }
   if ((e.ctrlKey||e.metaKey) && e.key==='e' && !editing) { e.preventDefault(); enterEdit(); }
-  if (e.key==='Escape') { if(editing){cancelEdit();return;} closeSettings(); closeNewPage(); }
+  if ((e.ctrlKey||e.metaKey) && e.key==='g' && !editing) { e.preventDefault(); openGraph(); }
+  if (e.key==='Escape') {
+    if (editing) { cancelEdit(); return; }
+    if (!$('overlay-graph').classList.contains('hidden')) { closeGraph(); return; }
+    closeSettings(); closeNewPage();
+  }
 });
 
 /* ═══════════════════════════════════════════════════════
@@ -1145,6 +1210,248 @@ function copySql() {
 });
 
 /* ═══════════════════════════════════════════════════════
+   GRAPH VIEW
+══════════════════════════════════════════════════════ */
+let _graphSim = null;
+
+function _extractLinks(content, fromPath) {
+  const links = new Set();
+  const re = /\[\[([^\]\|]+?)(?:\|[^\]]+?)?\]\]/g;
+  let m;
+  while ((m = re.exec(content)) !== null) {
+    let t = m[1].trim();
+    if (!t.includes('/')) {
+      const dir = fromPath.split('/').slice(0, -1).join('/');
+      if (dir) t = dir + '/' + t;
+    }
+    if (t !== fromPath) links.add(t);
+  }
+  return [...links];
+}
+
+function _buildGraphData() {
+  const nodeMap = new Map();
+  const edgeSet = new Set();
+  const edges   = [];
+
+  Object.keys(pages).forEach(path => {
+    nodeMap.set(path, {
+      id: path, title: pages[path].title || path.split('/').pop(),
+      exists: true, degree: 0
+    });
+  });
+
+  Object.entries(pages).forEach(([from, page]) => {
+    _extractLinks(page.content || '', from).forEach(to => {
+      if (!nodeMap.has(to)) {
+        nodeMap.set(to, { id: to, title: to.split('/').pop(), exists: false, degree: 0 });
+      }
+      const key = from < to ? from + '→' + to : to + '→' + from;
+      if (!edgeSet.has(key)) {
+        edgeSet.add(key);
+        edges.push({ source: from, target: to });
+        nodeMap.get(from).degree++;
+        nodeMap.get(to).degree++;
+      }
+    });
+  });
+
+  return { nodes: [...nodeMap.values()], edges };
+}
+
+async function openGraph() {
+  if (!window.d3) {
+    setStatus('syncing', 'グラフ読み込み中…');
+    await _loadScript('https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js');
+    setStatus('connected', backend ? backend.label + ' 接続済み' : '未接続');
+  }
+  $('overlay-graph').classList.remove('hidden');
+  // Wait for layout then render
+  requestAnimationFrame(() => requestAnimationFrame(renderGraph));
+}
+
+function closeGraph() {
+  $('overlay-graph').classList.add('hidden');
+  $('graph-tooltip').style.display = 'none';
+  if (_graphSim) { _graphSim.stop(); _graphSim = null; }
+}
+
+function renderGraph() {
+  if (_graphSim) { _graphSim.stop(); _graphSim = null; }
+
+  const { nodes, edges } = _buildGraphData();
+  const container = $('graph-container');
+  // Remove old svg but keep hint
+  container.querySelectorAll('svg').forEach(el => el.remove());
+
+  const W = container.clientWidth  || 800;
+  const H = container.clientHeight || 600;
+
+  $('graph-stats').textContent =
+    `${Object.keys(pages).length} ページ · ${edges.length} リンク · ${nodes.filter(n=>!n.exists).length} 未作成`;
+
+  // ── SVG setup ──
+  const svg = d3.select(container).append('svg')
+    .attr('viewBox', [0, 0, W, H]);
+
+  const defs = svg.append('defs');
+  // Arrow markers (normal + highlighted)
+  [['arrow-dim', '#30363d'], ['arrow-hi', '#58a6ff'], ['arrow-cur', '#f0883e']].forEach(([id, col]) => {
+    defs.append('marker').attr('id', id)
+      .attr('viewBox', '0 -4 8 8').attr('refX', 20).attr('refY', 0)
+      .attr('markerWidth', 5).attr('markerHeight', 5).attr('orient', 'auto')
+      .append('path').attr('d', 'M0,-4L8,0L0,4').attr('fill', col);
+  });
+
+  const g = svg.append('g');
+
+  const zoom = d3.zoom().scaleExtent([0.05, 10])
+    .on('zoom', e => g.attr('transform', e.transform));
+  svg.call(zoom).on('dblclick.zoom', null);
+
+  // ── Edges ──
+  const link = g.append('g').selectAll('line').data(edges).join('line')
+    .attr('stroke', '#2d333b')
+    .attr('stroke-width', 1.5)
+    .attr('stroke-opacity', 0.8)
+    .attr('marker-end', 'url(#arrow-dim)');
+
+  // ── Nodes ──
+  const nodeR = d => Math.max(5, Math.min(18, 5 + d.degree * 2));
+
+  const node = g.append('g').selectAll('g').data(nodes).join('g')
+    .attr('cursor', d => d.exists ? 'pointer' : 'default');
+
+  node.append('circle')
+    .attr('r', nodeR)
+    .attr('fill', d => {
+      if (d.id === curPath) return '#f0883e';
+      if (!d.exists)        return '#161b22';
+      if (d.degree === 0)   return '#21262d';
+      return '#1f6feb';
+    })
+    .attr('stroke', d => {
+      if (d.id === curPath) return '#f0883e';
+      if (!d.exists)        return '#444c56';
+      return '#388bfd';
+    })
+    .attr('stroke-width', d => d.id === curPath ? 2.5 : 1.5)
+    .attr('stroke-dasharray', d => d.exists ? null : '3,2')
+    .attr('filter', d => d.id === curPath ? 'drop-shadow(0 0 6px #f0883e88)' : null);
+
+  node.append('text')
+    .text(d => d.title.length > 18 ? d.title.slice(0, 17) + '…' : d.title)
+    .attr('text-anchor', 'middle')
+    .attr('dy', d => -(nodeR(d) + 5))
+    .attr('fill', d => d.id === curPath ? '#f0883e' : '#8b949e')
+    .attr('font-size', '11px')
+    .attr('font-family', 'system-ui, sans-serif')
+    .attr('pointer-events', 'none');
+
+  // ── Drag ──
+  node.call(d3.drag()
+    .on('start', (e, d) => {
+      if (!e.active) _graphSim.alphaTarget(0.3).restart();
+      d.fx = d.x; d.fy = d.y;
+    })
+    .on('drag', (e, d) => { d.fx = e.x; d.fy = e.y; })
+    .on('end',  (e, d) => {
+      if (!e.active) _graphSim.alphaTarget(0);
+      d.fx = null; d.fy = null;
+    })
+  );
+
+  // ── Hover ──
+  const tooltip = $('graph-tooltip');
+
+  node
+    .on('mouseenter', (e, d) => {
+      const neighbors = new Set([d.id]);
+      edges.forEach(edge => {
+        const s = edge.source.id ?? edge.source;
+        const t = edge.target.id ?? edge.target;
+        if (s === d.id) neighbors.add(t);
+        if (t === d.id) neighbors.add(s);
+      });
+
+      node.style('opacity', n => neighbors.has(n.id) ? 1 : 0.12);
+      link
+        .style('opacity', l => {
+          const s = l.source.id ?? l.source;
+          const t = l.target.id ?? l.target;
+          return (s === d.id || t === d.id) ? 1 : 0.04;
+        })
+        .attr('stroke', l => {
+          const s = l.source.id ?? l.source;
+          const t = l.target.id ?? l.target;
+          if (s === d.id || t === d.id) {
+            return d.id === curPath ? '#f0883e' : '#58a6ff';
+          }
+          return '#2d333b';
+        })
+        .attr('marker-end', l => {
+          const s = l.source.id ?? l.source;
+          const t = l.target.id ?? l.target;
+          if (d.id === curPath && (s === d.id || t === d.id)) return 'url(#arrow-cur)';
+          if (s === d.id || t === d.id) return 'url(#arrow-hi)';
+          return 'url(#arrow-dim)';
+        });
+
+      tooltip.textContent = d.id + (d.exists ? '' : '（未作成）');
+      tooltip.style.display = 'block';
+    })
+    .on('mousemove', e => {
+      tooltip.style.left = (e.clientX + 14) + 'px';
+      tooltip.style.top  = (e.clientY - 32) + 'px';
+    })
+    .on('mouseleave', () => {
+      node.style('opacity', 1);
+      link.style('opacity', 0.8)
+          .attr('stroke', '#2d333b')
+          .attr('marker-end', 'url(#arrow-dim)');
+      tooltip.style.display = 'none';
+    })
+    .on('click', (e, d) => {
+      e.stopPropagation();
+      if (d.exists) { closeGraph(); openPage(d.id); }
+      else if (confirm(`「${d.id}」はまだ存在しません。作成しますか？`)) {
+        closeGraph();
+        _prefillPath = d.id; _prefillTitle = d.id.split('/').pop(); openNewPage();
+      }
+    });
+
+  // ── Simulation ──
+  _graphSim = d3.forceSimulation(nodes)
+    .force('link',    d3.forceLink(edges).id(d => d.id).distance(110).strength(0.4))
+    .force('charge',  d3.forceManyBody().strength(-220).distanceMax(400))
+    .force('center',  d3.forceCenter(W / 2, H / 2))
+    .force('x',       d3.forceX(W / 2).strength(0.03))
+    .force('y',       d3.forceY(H / 2).strength(0.03))
+    .force('collide', d3.forceCollide(d => nodeR(d) + 10));
+
+  _graphSim.on('tick', () => {
+    link
+      .attr('x1', d => d.source.x).attr('y1', d => d.source.y)
+      .attr('x2', d => d.target.x).attr('y2', d => d.target.y);
+    node.attr('transform', d => `translate(${d.x},${d.y})`);
+  });
+
+  // Auto-fit once simulation settles
+  _graphSim.on('end', () => {
+    if (!nodes.length) return;
+    const xs = nodes.map(n => n.x), ys = nodes.map(n => n.y);
+    const pad = 60;
+    const x0 = Math.min(...xs) - pad, x1 = Math.max(...xs) + pad;
+    const y0 = Math.min(...ys) - pad, y1 = Math.max(...ys) + pad;
+    const sc = Math.min(1.5, (W / (x1 - x0)) * 0.9, (H / (y1 - y0)) * 0.9);
+    const tx = (W - sc * (x0 + x1)) / 2;
+    const ty = (H - sc * (y0 + y1)) / 2;
+    svg.transition().duration(700)
+      .call(zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(sc));
+  });
+}
+
+/* ═══════════════════════════════════════════════════════
    WELCOME CONTENT
 ══════════════════════════════════════════════════════ */
 const WELCOME_CONTENT = `# ようこそ My Wiki へ 🎉
@@ -1189,6 +1496,7 @@ def hello():
 - **Ctrl + E** — 現在のページを編集
 - **Ctrl + N** — 新規ページ作成（現在のディレクトリを自動入力）
 - **Ctrl + S** — 編集中のページを保存
+- **Ctrl + G** — グラフビューを開く
 - **Esc** — 編集をキャンセル / モーダルを閉じる
 `;
 </script>
