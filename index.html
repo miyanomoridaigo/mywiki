@@ -356,7 +356,7 @@ body { display: flex; flex-direction: column; overflow: hidden; }
       </div>
       <div id="viewer" style="display:none"></div>
       <textarea id="editor" placeholder="Markdown で記述できます。&#10;[[ページパス]] でリンクを作成します。&#10;例: [[notes/meeting]] [[projects/web|プロジェクト]]"></textarea>
-      <div id="editor-hint">Ctrl+S 保存 · Esc キャンセル</div>
+      <div id="editor-hint">Ctrl+S 保存 · Ctrl+N 新規ページ · Esc キャンセル</div>
     </div>
     <div id="status-bar">
       <div class="status-dot disconnected" id="status-dot"></div>
@@ -1057,6 +1057,7 @@ async function deletePage() {
 
 document.addEventListener('keydown', e => {
   if ((e.ctrlKey||e.metaKey) && e.key==='s' && editing) { e.preventDefault(); saveNow(); }
+  if ((e.ctrlKey||e.metaKey) && e.key==='n' && !editing) { e.preventDefault(); openNewPage(); }
   if (e.key==='Escape') { if(editing){cancelEdit();return;} closeSettings(); closeNewPage(); }
 });
 
@@ -1184,8 +1185,9 @@ def hello():
 
 ## キーボードショートカット
 
+- **Ctrl + N** — 新規ページ作成（現在のディレクトリを自動入力）
 - **Ctrl + S** — 編集中のページを保存
-- **Esc** — 編集をキャンセル
+- **Esc** — 編集をキャンセル / モーダルを閉じる
 `;
 </script>
 </body>
