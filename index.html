@@ -6,6 +6,7 @@
 <title>My Wiki</title>
 <script src="https://cdn.jsdelivr.net/npm/marked@9.1.6/marked.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/easymde@2.18.0/dist/easymde.min.css">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -355,6 +356,107 @@ body { display: flex; flex-direction: column; overflow: hidden; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--bg4); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text3); }
+
+/* ═══ EasyMDE DARK THEME ══════════════════════════════ */
+.EasyMDEContainer .editor-toolbar {
+  background: var(--bg2); border: none;
+  border-bottom: 1px solid var(--border);
+  padding: 4px 10px; opacity: 1 !important;
+}
+.EasyMDEContainer .editor-toolbar button {
+  color: var(--text2) !important; background: transparent;
+  border: 1px solid transparent; border-radius: 4px;
+  transition: background 0.1s, color 0.1s, border-color 0.1s;
+}
+.EasyMDEContainer .editor-toolbar button:hover,
+.EasyMDEContainer .editor-toolbar button.active {
+  background: var(--bg4) !important; color: var(--text) !important;
+  border-color: var(--border) !important;
+}
+.EasyMDEContainer .editor-toolbar i.separator {
+  border-left: 1px solid var(--border); border-right: none;
+}
+.EasyMDEContainer .CodeMirror {
+  background: var(--bg) !important; color: var(--text) !important;
+  border: none !important; border-radius: 0;
+  font-family: 'JetBrains Mono', Consolas, monospace !important;
+  font-size: 14px !important; line-height: 1.75 !important;
+  padding: 20px 28px; height: auto; min-height: 400px;
+}
+.EasyMDEContainer .CodeMirror-scroll { min-height: 400px; }
+.EasyMDEContainer .CodeMirror-cursor { border-left: 2px solid var(--text) !important; }
+.EasyMDEContainer .CodeMirror-selected { background: rgba(88,166,255,0.2) !important; }
+.EasyMDEContainer .CodeMirror-focused .CodeMirror-selected { background: rgba(88,166,255,0.25) !important; }
+/* Syntax tokens */
+.EasyMDEContainer .cm-s-easymde .cm-header  { color: #e6edf3 !important; font-weight: 700; }
+.EasyMDEContainer .cm-s-easymde .cm-strong  { color: #e6edf3 !important; font-weight: 700; }
+.EasyMDEContainer .cm-s-easymde .cm-em      { color: #a5d6ff !important; font-style: italic; }
+.EasyMDEContainer .cm-s-easymde .cm-quote   { color: var(--text2) !important; font-style: italic; }
+.EasyMDEContainer .cm-s-easymde .cm-link    { color: var(--accent) !important; }
+.EasyMDEContainer .cm-s-easymde .cm-url     { color: var(--text3) !important; }
+.EasyMDEContainer .cm-s-easymde .cm-comment,
+.EasyMDEContainer .cm-s-easymde .cm-code    { color: #79c0ff !important; }
+.EasyMDEContainer .cm-s-easymde .cm-variable-2 { color: var(--text2) !important; }
+.EasyMDEContainer .cm-s-easymde .cm-hr      { color: var(--border) !important; }
+.EasyMDEContainer .cm-s-easymde .cm-tag     { color: var(--warning) !important; }
+/* Preview pane */
+.EasyMDEContainer .editor-preview,
+.EasyMDEContainer .editor-preview-side {
+  background: var(--bg2) !important; color: var(--text) !important;
+  border-left: 1px solid var(--border) !important;
+  padding: 24px 28px !important; line-height: 1.85;
+}
+.EasyMDEContainer .editor-preview h1,
+.EasyMDEContainer .editor-preview h2,
+.EasyMDEContainer .editor-preview h3 { color: #e6edf3; font-weight: 700; margin: 1.2em 0 0.5em; }
+.EasyMDEContainer .editor-preview h2 { border-bottom: 1px solid var(--border); padding-bottom: 0.3em; }
+.EasyMDEContainer .editor-preview code {
+  background: var(--bg3); color: #79c0ff;
+  border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px;
+  font-family: 'JetBrains Mono', Consolas, monospace; font-size: 0.88em;
+}
+.EasyMDEContainer .editor-preview pre {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 8px; padding: 16px; overflow-x: auto;
+}
+.EasyMDEContainer .editor-preview pre code { background: none; border: none; padding: 0; }
+.EasyMDEContainer .editor-preview blockquote {
+  border-left: 4px solid var(--accent2); color: var(--text2); padding: 4px 16px;
+}
+.EasyMDEContainer .editor-preview a { color: var(--accent); }
+.EasyMDEContainer .editor-preview table { border-collapse: collapse; width: 100%; margin: 1em 0; }
+.EasyMDEContainer .editor-preview th,
+.EasyMDEContainer .editor-preview td { border: 1px solid var(--border); padding: 7px 12px; }
+.EasyMDEContainer .editor-preview th { background: var(--bg3); color: #fff; }
+.EasyMDEContainer .editor-preview ul,
+.EasyMDEContainer .editor-preview ol { padding-left: 1.6em; }
+.EasyMDEContainer .editor-preview p { margin: 0.75em 0; }
+.EasyMDEContainer .editor-preview a.wl-new { color: var(--link-new); }
+/* Status bar: hide (we have our own) */
+.EasyMDEContainer .editor-statusbar { display: none !important; }
+/* Full-screen mode */
+.EasyMDEContainer.CodeMirror-fullscreen,
+.editor-fullscreen { background: var(--bg) !important; z-index: 9999 !important; }
+/* EasyMDE scrollbar */
+.EasyMDEContainer .CodeMirror-scroll::-webkit-scrollbar { width: 5px; }
+.EasyMDEContainer .CodeMirror-scroll::-webkit-scrollbar-track { background: transparent; }
+.EasyMDEContainer .CodeMirror-scroll::-webkit-scrollbar-thumb { background: var(--bg4); border-radius: 3px; }
+
+/* ─── Editing-mode layout ────────────────────────────── */
+#content.editing #page-body {
+  padding: 0; overflow: hidden;
+  display: flex; flex-direction: column;
+}
+#content.editing .EasyMDEContainer { flex: 1; min-height: 0; }
+#content.editing .EasyMDEContainer .CodeMirror {
+  height: 100% !important; min-height: 0 !important; padding: 20px 28px;
+}
+#content.editing .EasyMDEContainer .CodeMirror-scroll {
+  overflow-y: auto; overflow-x: hidden;
+}
+#content.editing #editor-hint {
+  bottom: 40px; right: 20px; z-index: 50;
+}
 </style>
 </head>
 <body>
@@ -396,7 +498,7 @@ body { display: flex; flex-direction: column; overflow: hidden; }
       </div>
       <div id="viewer" style="display:none"></div>
       <textarea id="editor" placeholder="Markdown で記述できます。&#10;[[ページパス]] でリンクを作成します。&#10;例: [[notes/meeting]] [[projects/web|プロジェクト]]"></textarea>
-      <div id="editor-hint">Ctrl+S 保存 · Ctrl+N 新規 · Esc キャンセル</div>
+      <div id="editor-hint">Ctrl+S 保存 · Esc キャンセル · ⟦⟧ Wikiリンク</div>
     </div>
     <div id="status-bar">
       <div class="status-dot disconnected" id="status-dot"></div>
@@ -800,6 +902,7 @@ let editing   = false;
 let unwatchFn = null;
 let searchQ   = '';
 let curTab    = 'gist'; // default tab
+let _mde      = null;   // EasyMDE instance
 
 /* ═══════════════════════════════════════════════════════
    MARKED SETUP (wiki link extension)
@@ -1008,6 +1111,7 @@ function goHome() {
 
 function renderContent() {
   const p = pages[curPath]; if (!p) return;
+  _destroyMde();
   $('empty-state').style.display = 'none';
   $('viewer').style.display      = '';
   $('editor').style.display      = 'none';
@@ -1042,6 +1146,7 @@ function renderContent() {
 
 function showEmpty() {
   curPath = null;
+  _destroyMde();
   $('empty-state').style.display  = '';
   $('viewer').style.display       = 'none';
   $('editor').style.display       = 'none';
@@ -1059,6 +1164,22 @@ function updateHeader() {
 /* ═══════════════════════════════════════════════════════
    EDIT
 ══════════════════════════════════════════════════════ */
+
+async function _loadEasyMDE() {
+  if (window.EasyMDE) return;
+  await _loadScript('https://cdn.jsdelivr.net/npm/easymde@2.18.0/dist/easymde.min.js');
+}
+
+function _destroyMde() {
+  if (_mde) {
+    try { _mde.toTextArea(); } catch {}
+    _mde = null;
+  }
+  $('content').classList.remove('editing');
+  $('editor').style.display      = 'none';
+  $('editor-hint').style.display = 'none';
+}
+
 function setEditUI(on) {
   $('btn-edit').style.display   = (!on && curPath) ? '' : 'none';
   $('btn-delete').style.display = (!on && curPath) ? '' : 'none';
@@ -1066,7 +1187,7 @@ function setEditUI(on) {
   $('btn-cancel').style.display = on ? '' : 'none';
 }
 
-function enterEdit() {
+async function enterEdit() {
   if (!curPath || !backend) return;
   editing = true;
   const p = pages[curPath];
@@ -1074,15 +1195,73 @@ function enterEdit() {
   $('title-edit').style.display  = 'block';
   $('title-edit').value          = p.title || '';
   $('viewer').style.display      = 'none';
-  $('editor').style.display      = 'block';
-  $('editor').value              = p.content || '';
   $('editor-hint').style.display = 'block';
   setEditUI(true);
-  $('editor').focus();
+
+  // Load EasyMDE (cached after first load)
+  await _loadEasyMDE();
+
+  // Destroy any existing instance
+  if (_mde) { try { _mde.toTextArea(); } catch {} _mde = null; }
+
+  // Make textarea visible so EasyMDE can wrap it
+  $('editor').style.display = 'block';
+  $('editor').value = p.content || '';
+
+  // Switch page-body to full-height flex layout
+  $('content').classList.add('editing');
+
+  _mde = new EasyMDE({
+    element: $('editor'),
+    autofocus: true,
+    spellChecker: false,
+    status: false,
+    tabSize: 2,
+    lineWrapping: true,
+    previewRender: (text) => marked.parse(text),
+    toolbar: [
+      "bold", "italic", "strikethrough", "|",
+      "heading-1", "heading-2", "heading-3", "|",
+      "unordered-list", "ordered-list", "checklist", "|",
+      "link", "code", "horizontal-rule", "|",
+      "quote", "table", "|",
+      {
+        name: "wikilink",
+        action(ed) {
+          const cm = ed.codemirror;
+          const sel = cm.getSelection();
+          const txt = sel || "ページ名";
+          cm.replaceSelection(`[[${txt}]]`);
+          if (!sel) {
+            const cur = cm.getCursor();
+            cm.setSelection(
+              { line: cur.line, ch: cur.ch - 2 - txt.length },
+              { line: cur.line, ch: cur.ch - 2 }
+            );
+          }
+        },
+        className: "fa fa-brackets-curly",
+        title: "Wiki リンク [[ページ名]]",
+        text: "⟦⟧"
+      },
+      "|",
+      "preview", "side-by-side"
+    ],
+    shortcuts: {
+      "toggleSideBySide": null,
+      "toggleFullScreen":  null,
+    },
+    extraKeys: {
+      "Ctrl-S": () => saveNow(),
+      "Cmd-S":  () => saveNow(),
+      "Escape": () => cancelEdit(),
+    }
+  });
 }
 
 function cancelEdit() {
   editing = false;
+  _destroyMde();
   if (curPath && pages[curPath]) renderContent();
   else showEmpty();
   setEditUI(false);
@@ -1091,13 +1270,14 @@ function cancelEdit() {
 async function saveNow() {
   if (!curPath || !backend) return;
   const title   = $('title-edit').value.trim() || curPath.split('/').pop();
-  const content = $('editor').value;
+  const content = _mde ? _mde.value() : $('editor').value;
   setStatus('syncing', '保存中…');
   try {
     await backend.save(curPath, title, content);
     pages[curPath] = { ...pages[curPath], title, content, updated_at: new Date().toISOString() };
     setStatus('connected', backend.label + ' 接続済み'); stamp();
     editing = false;
+    _destroyMde();
     renderSidebar(); renderContent(); setEditUI(false);
   } catch (e) {
     setStatus('connected', '保存エラー: ' + e.message);
