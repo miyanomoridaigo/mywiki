@@ -1116,10 +1116,12 @@ async function deletePage() {
 }
 
 document.addEventListener('keydown', e => {
-  if ((e.ctrlKey||e.metaKey) && e.key==='s' && editing)  { e.preventDefault(); saveNow(); }
-  if ((e.ctrlKey||e.metaKey) && e.key==='n' && !editing) { e.preventDefault(); openNewPage(); }
-  if ((e.ctrlKey||e.metaKey) && e.key==='e' && !editing) { e.preventDefault(); enterEdit(); }
-  if ((e.ctrlKey||e.metaKey) && e.key==='g' && !editing) { e.preventDefault(); openGraph(); }
+  const mod = e.ctrlKey || e.metaKey;
+  const alt = e.altKey;
+  if ((mod && e.key==='s') || (alt && e.key==='s'))  { if (editing)  { e.preventDefault(); saveNow();    } }
+  if ((mod && e.key==='n') || (alt && e.key==='n'))  { if (!editing) { e.preventDefault(); openNewPage();} }
+  if ((mod && e.key==='e') || (alt && e.key==='e'))  { if (!editing) { e.preventDefault(); enterEdit();  } }
+  if ((mod && e.key==='g'))                          { if (!editing) { e.preventDefault(); openGraph();  } }
   if (e.key==='Escape') {
     if (editing) { cancelEdit(); return; }
     if (!$('overlay-graph').classList.contains('hidden')) { closeGraph(); return; }
@@ -1493,10 +1495,10 @@ def hello():
 
 ## キーボードショートカット
 
-- **Ctrl + E** — 現在のページを編集
-- **Ctrl + N** — 新規ページ作成（現在のディレクトリを自動入力）
-- **Ctrl + S** — 編集中のページを保存
-- **Ctrl + G** — グラフビューを開く
+- **Ctrl+E** / **Alt+E** — 現在のページを編集
+- **Ctrl+N** / **Alt+N** — 新規ページ作成（現在のディレクトリを自動入力）
+- **Ctrl+S** / **Alt+S** — 編集中のページを保存
+- **Ctrl+G** — グラフビューを開く
 - **Esc** — 編集をキャンセル / モーダルを閉じる
 `;
 </script>
