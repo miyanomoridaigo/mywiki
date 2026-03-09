@@ -1362,7 +1362,7 @@ async function doCreatePage() {
 }
 
 $('overlay-newpage').addEventListener('keydown', e => {
-  if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); doCreatePage(); }
+  if (e.key==='Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); doCreatePage(); }
 });
 
 /* ═══════════════════════════════════════════════════════
