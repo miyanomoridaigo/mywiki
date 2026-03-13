@@ -1362,8 +1362,19 @@ async function doCreatePage() {
   closeNewPage(); renderSidebar(); openPage(path); enterEdit();
 }
 
+/* IME 変換確定の Enter を誤検知しないよう compositionend を追跡する。
+   Chrome では compositionend が keydown より先に発火し isComposing が false に
+   戻ってしまうため、setTimeout(0) で 1 イベントループ分だけフラグを保持する。 */
+let _imeComposing = false;
+['np-path','np-title'].forEach(id => {
+  $(id).addEventListener('compositionstart', () => { _imeComposing = true; });
+  $(id).addEventListener('compositionend',   () => { setTimeout(() => { _imeComposing = false; }, 0); });
+});
+
 $('overlay-newpage').addEventListener('keydown', e => {
-  if (e.key==='Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); doCreatePage(); }
+  if (e.key==='Enter' && !e.shiftKey && !e.isComposing && !_imeComposing) {
+    e.preventDefault(); doCreatePage();
+  }
 });
 
 /* ═══════════════════════════════════════════════════════
